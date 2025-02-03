@@ -28,6 +28,8 @@ class CHEEKDataset(Dataset):
                         self.features.append(mel_signal)  
                         self.labels.append(label)
                         self.label_counts[class_folder] += 1  # Increment the count for the current label
+        print("Data loaded successfully")    
+        print(self.label_counts)         
 
     def __len__(self):
         return len(self.features)
@@ -38,9 +40,10 @@ class CHEEKDataset(Dataset):
         return nn.tensor(feature, dtype=nn.float32), nn.tensor(label, dtype=nn.long)
 
 class CHEEKDataModule(pl.LightningDataModule):
-    def __init__(self, data_folder,batch_size=32, num_workers=4):
+    def __init__(self, data_folder,test_folder, batch_size=32, num_workers=4):
         super().__init__()
         self.data_folder = data_folder
+        self.test_folder = test_folder
         self.batch_size = batch_size
         self.num_workers = num_workers
 
@@ -56,7 +59,7 @@ class CHEEKDataModule(pl.LightningDataModule):
         
         if stage == "test" or stage is None:
 
-            self.cheek_test = CHEEKDataset(self.data_folder)
+            self.cheek_test = CHEEKDataset(self.test_folder)
 
     def train_dataloader(self):
         return DataLoader(self.cheek_train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
@@ -163,18 +166,17 @@ class CHEEKClassifier(pl.LightningModule):
 
 # Example usage
 data_folder = 'DataBase/CHEEK'  # Replace with your actual data folder path
+test_folder = 'DataBase/CHEEK_test'
 batch_size = 16
 num_workers = 4
 
 
-data_module = CHEEKDataModule(data_folder, batch_size, num_workers)
-print("Sample number: ", len(data_module.dataset))
-print("Data samples per label: ", data_module.dataset.label_counts)
+data_module = CHEEKDataModule(data_folder, test_folder, batch_size, num_workers)
 model = CHEEKClassifier(15)
 print(model)
 
 
-trainer = pl.Trainer(devices='auto',max_epochs=50,accelerator='auto')
+trainer = pl.Trainer(devices='auto',max_epochs=20,accelerator='auto')
 trainer.fit(model, data_module)
 #nn.save(model, 'model.pth')
 trainer.test(model,datamodule=data_module)
