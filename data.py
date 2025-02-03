@@ -21,8 +21,9 @@ class EMGDataset(Dataset):
                     audio, fs = librosa.load(file_path, sr=None, mono=False)  # mono=False --> stereo audio
                     # Verify that the audio is stereo
                     if audio.ndim == 2:
-                        emg_filtered = pass_band_filter(audio[1,:])
-                        self.features.append(audio[1, :])  # EMG signal
+                        emg_filtered = pass_band_filter(audio[1,:]) # EMG signal
+                        stft_signal = librosa.stft(emg_filtered)
+                        self.features.append(stft_signal)  
                         self.labels.append(label)
                         self.label_counts[class_folder] += 1  # Increment the count for the current label
 
