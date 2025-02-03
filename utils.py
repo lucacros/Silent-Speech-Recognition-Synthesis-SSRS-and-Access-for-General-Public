@@ -21,3 +21,8 @@ def pass_band_filter(emg_signal, low=20, high=500, fs=44100, order=4):
 
 # audio, fs = librosa.load("DataBase/CHEEK/Bye/Bye_1.wav", sr=None, mono=False)  # 'sr=None' pour conserver la fréquence d'échantillonnage originale
 # print(pass_band_filter(audio[1,:]))
+
+def audio_to_mel_spectrogram(signal, sr=44100, n_fft=2048, hop_length=1024, n_mels=40, save_path=None):
+    # Calcul du spectrogramme Mel
+    mel_spec = librosa.feature.melspectrogram(y=signal, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
+    return mel_spec
