@@ -6,6 +6,8 @@ from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 import torchmetrics
 import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 from utils import pass_band_filter, audio_to_mel_spectrogram
 
 class CHEEKDataset(Dataset):
@@ -23,8 +25,8 @@ class CHEEKDataset(Dataset):
                     audio, fs = librosa.load(file_path, sr=None, mono=False)  # mono=False --> stereo audio
                     # Verify that the audio is stereo
                     if audio.ndim == 2:
-                        emg_filtered = pass_band_filter(audio[1,:]) # EMG signal
-                        mel_signal = audio_to_mel_spectrogram(emg_filtered)
+                        emg_filtered = pass_band_filter(audio[0,:], fs=44100) # EMG signal
+                        mel_signal = audio_to_mel_spectrogram(emg_filtered, sr=44100)
                         self.features.append(mel_signal)  
                         self.labels.append(label)
                         self.label_counts[class_folder] += 1  # Increment the count for the current label
@@ -98,6 +100,9 @@ class CHEEKClassifier(pl.LightningModule):
 
         self.training_step_outputs = []
         self.validation_step_outputs = []
+
+        self.test_preds = []
+        self.test_targets = []
         
 
     
@@ -114,7 +119,7 @@ class CHEEKClassifier(pl.LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
-        x, y = batch     
+        x, y = batch  # x is the MEL input, y is the label  
         estim = self.forward(x)
         loss = nn.nn.CrossEntropyLoss()(estim, y)
         preds = nn.argmax(estim, dim=1)
@@ -153,6 +158,8 @@ class CHEEKClassifier(pl.LightningModule):
         # Don't remove the next line, you will understand why later
         self.log('test_loss', loss)
         self.log('test_acc', acc)
+        self.test_preds.append(preds)
+        self.test_targets.append(y)
 
     def test_epoch_start(self):
         self.accc= 0
@@ -160,13 +167,21 @@ class CHEEKClassifier(pl.LightningModule):
     def on_test_epoch_end(self):
         self.acc = self.acc_test #torch metrics
         self.log('Final Accuracy', self.acc) #average test batch
+        plt.figure(figsize=(10, 6))
+        plt.plot(self.training_step_outputs, label='Training Loss')
+        plt.plot(self.validation_step_outputs, label='Validation Loss')
+        plt.savefig("loss_plot.png")
+        plt.show()
+        plt.draw()
+        plt.pause(0.001)
+        plt.close()
 
 
 
 
 # Example usage
 data_folder = 'DataBase/CHEEK'  # Replace with your actual data folder path
-test_folder = 'DataBase/CHEEK_test'
+test_folder = 'DataBase/CHEEK_test/samples'
 batch_size = 16
 num_workers = 4
 
@@ -176,8 +191,7 @@ model = CHEEKClassifier(15)
 print(model)
 
 
-trainer = pl.Trainer(devices='auto',max_epochs=20,accelerator='auto')
+trainer = pl.Trainer(devices='auto',max_epochs=2,accelerator='auto')
 trainer.fit(model, data_module)
 #nn.save(model, 'model.pth')
 trainer.test(model,datamodule=data_module)
-

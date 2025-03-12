@@ -1,7 +1,9 @@
 from scipy import signal
 import librosa
+import numpy as np
+import matplotlib.pyplot as plt
 
-def pass_band_filter(emg_signal, low=20, high=500, fs=44100, order=4):
+def pass_band_filter(emg_signal, low=20, high=500, fs=10000, order=4):
     """
     Pass band filter for EMG emg_signal.
     :param emg_signal: EMG emg_signal
@@ -23,6 +25,8 @@ def pass_band_filter(emg_signal, low=20, high=500, fs=44100, order=4):
 # print(pass_band_filter(audio[1,:]))
 
 def audio_to_mel_spectrogram(signal, sr=44100, n_fft=2048, hop_length=1024, n_mels=40, save_path=None):
-    # Calcul du spectrogramme Mel
+    # Calcul du spectrogramme Mel (40,87)
     mel_spec = librosa.feature.melspectrogram(y=signal, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels)
-    return mel_spec
+    mel_spec_db = librosa.power_to_db(mel_spec, ref=np.max)  # Conversion en dB
+    return mel_spec_db
+
